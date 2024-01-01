@@ -52,13 +52,19 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
             year,
         } = dir.metadata;
 
-        let image = dir.image_files.into_iter().find(|it| it.use_as_cover).map(
+        let picture_path = dir.image_files.into_iter().find(|it| it.use_as_cover).map(
             |ImageFile { file_path, .. }| {
                 let mut path: PathBuf = dir.path.as_str().into();
                 path.push(file_path);
                 path
             },
         );
+
+        let id3_picture = if let Some(path) = picture_path {
+            Some(prepare_tag_picture(&path)?)
+        } else {
+            None
+        };
 
         for (index, file) in dir.music_files.into_iter().enumerate() {
             let metadata = Metadata {
@@ -73,17 +79,17 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
             let mut path: PathBuf = dir.path.as_str().into();
             path.push(file.file_path);
 
-            save_metadata_for_file(path.to_str().unwrap(), metadata, image.as_deref())?;
+            save_metadata_for_file(path.to_str().unwrap(), metadata, id3_picture.as_ref())?;
         }
     }
 
     Ok(())
 }
 
-fn save_metadata_for_file(path: &str, metadata: Metadata, image: Option<&Path>) -> Result<()> {
+fn save_metadata_for_file(path: &str, metadata: Metadata, picture: Option<&Picture>) -> Result<()> {
     let mut tag = id3::no_tag_ok(Tag::read_from_path(path))?.unwrap_or(Tag::new());
 
-    let artist = match metadata.artist.as_ref().map(String::as_str) {
+    let artist = match metadata.artist.as_deref() {
         Some("") | None => metadata.album_artist.as_str(),
         Some(a) => a,
     };
@@ -108,9 +114,8 @@ fn save_metadata_for_file(path: &str, metadata: Metadata, image: Option<&Path>) 
         ..Default::default()
     });
 
-    if let Some(image_path) = image {
-        let picture = prepare_tag_picture(image_path)?;
-        tag.add_frame(picture);
+    if let Some(picture) = picture {
+        tag.add_frame(picture.clone());
     }
 
     tag.write_to_path(path, tag.version())?;
