@@ -83,7 +83,12 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
 fn save_metadata_for_file(path: &str, metadata: Metadata, image: Option<&Path>) -> Result<()> {
     let mut tag = id3::no_tag_ok(Tag::read_from_path(path))?.unwrap_or(Tag::new());
 
-    tag.set_artist(metadata.artist.as_ref().unwrap_or(&metadata.album_artist));
+    let artist = match metadata.artist.as_ref().map(String::as_str) {
+        Some("") | None => metadata.album_artist.as_str(),
+        Some(a) => a,
+    };
+
+    tag.set_artist(artist);
     tag.set_title(&metadata.title);
     tag.set_track(metadata.track);
     tag.set_album(&metadata.album);
