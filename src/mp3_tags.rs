@@ -62,7 +62,7 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
 
         for (index, file) in dir.music_files.into_iter().enumerate() {
             let metadata = Metadata {
-                track: index as u32,
+                track: (index as u32) + 1,
                 title: file.metadata.title,
                 artist: file.metadata.artist,
                 album: album.clone(),
