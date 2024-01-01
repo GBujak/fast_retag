@@ -21,7 +21,7 @@ pub fn get_mp3_metadata(path: impl AsRef<Path>, track: u32) -> Result<Metadata> 
             .map(str::to_owned)
             .map(fix_toml_string)
             .unwrap_or(String::new()),
-        track: track,
+        track,
         album: tag
             .album()
             .map(str::to_owned)
@@ -76,7 +76,7 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
             save_metadata_for_file(
                 path.to_str().unwrap(),
                 metadata,
-                image.as_ref().map(PathBuf::as_path),
+                image.as_deref(),
             )?;
         }
     }

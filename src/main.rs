@@ -62,7 +62,7 @@ fn found_info_and_should_abort(found_dirs: &[MusicDir]) -> bool {
         },
         file,
     ) in found_dirs
-        .into_iter()
+        .iter()
         .flat_map(|it| it.music_files.iter().map(|file| (&it.metadata, file)))
     {
         let MusicFile {

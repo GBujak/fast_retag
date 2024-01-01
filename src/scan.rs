@@ -52,7 +52,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
             image_files,
         }]
         .into_iter()
-        .chain(subdirs.into_iter())
+        .chain(subdirs)
         .collect(),
 
         None => subdirs,
@@ -62,9 +62,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
 fn assert_unicode_path(path: impl AsRef<Path>) -> String {
     path.as_ref()
         .to_str()
-        .expect(&format!(
-            "Path must be UTF-8! [{}]",
-            path.as_ref().to_string_lossy()
-        ))
+        .unwrap_or_else(|| panic!("Path must be UTF-8! [{}]",
+            path.as_ref().to_string_lossy()))
         .to_string()
 }
