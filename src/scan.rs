@@ -14,7 +14,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
 
         if file.file_name().to_string_lossy().ends_with(".mp3") {
             let (track, track_metadata, new_album_metadata) =
-                get_mp3_metadata(file.path(), index as u32)?.to_track_and_metadatas();
+                get_mp3_metadata(file.path(), index as u32)?.into_track_and_metadatas();
             album_metadata.get_or_insert(new_album_metadata);
 
             music_files.push((
@@ -62,7 +62,6 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
 fn assert_unicode_path(path: impl AsRef<Path>) -> String {
     path.as_ref()
         .to_str()
-        .unwrap_or_else(|| panic!("Path must be UTF-8! [{}]",
-            path.as_ref().to_string_lossy()))
+        .unwrap_or_else(|| panic!("Path must be UTF-8! [{}]", path.as_ref().to_string_lossy()))
         .to_string()
 }

@@ -67,7 +67,7 @@ pub struct AlbumMetadata {
 }
 
 impl Metadata {
-    pub fn to_track_and_metadatas(self) -> (u32, TrackMetadata, AlbumMetadata) {
+    pub fn into_track_and_metadatas(self) -> (u32, TrackMetadata, AlbumMetadata) {
         let Metadata {
             title,
             track,
