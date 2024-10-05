@@ -126,7 +126,10 @@ fn prepare_tag_picture(image_path: &Path) -> Result<Picture> {
     let img = ImageReader::open(image_path)?.decode()?;
     let img = img.resize_to_fill(512, 512, image::imageops::FilterType::Triangle);
     let mut buff = Vec::<u8>::with_capacity(4096);
-    img.write_to(&mut Cursor::new(&mut buff), image::ImageOutputFormat::Png)?;
+    img.write_to(
+        &mut Cursor::new(&mut buff),
+        image::ImageOutputFormat::Jpeg(90),
+    )?;
 
     Ok(Picture {
         mime_type: "image/jpg".into(),
