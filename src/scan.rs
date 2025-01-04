@@ -38,11 +38,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
         }
     }
 
-    music_files.sort_by_key(|(track, _music_file)| *track);
-    let music_files = music_files
-        .into_iter()
-        .map(|(_track, music_file)| music_file)
-        .collect();
+    let music_files = sorted_by_track_number(music_files);
 
     Ok(match album_metadata {
         Some(metadata) => [MusicDir {
@@ -57,6 +53,11 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
 
         None => subdirs,
     })
+}
+
+fn sorted_by_track_number(mut music_files_with_tracks: Vec<(u32, MusicFile)>) -> Vec<MusicFile> {
+    music_files_with_tracks.sort_by_key(|it| it.0);
+    music_files_with_tracks.into_iter().map(|it| it.1).collect()
 }
 
 fn assert_unicode_path(path: impl AsRef<Path>) -> String {

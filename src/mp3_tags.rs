@@ -21,7 +21,7 @@ pub fn get_mp3_metadata(path: impl AsRef<Path>, track: u32) -> Result<Metadata> 
             .map(str::to_owned)
             .map(fix_toml_string)
             .unwrap_or(String::new()),
-        track,
+        track: tag.track().unwrap_or(track),
         album: tag
             .album()
             .map(str::to_owned)
