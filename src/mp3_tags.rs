@@ -3,7 +3,7 @@ use anyhow::{Ok, Result};
 use chrono::Datelike;
 use id3::frame::Picture;
 use id3::{no_tag_ok, Tag, TagLike};
-use image::io::Reader as ImageReader;
+use image::{ImageFormat, ImageReader};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
@@ -21,7 +21,7 @@ pub fn get_mp3_metadata(path: impl AsRef<Path>, track: u32) -> Result<Metadata> 
             .map(str::to_owned)
             .map(fix_toml_string)
             .unwrap_or(String::new()),
-        track,
+        track: tag.track().unwrap_or(track),
         album: tag
             .album()
             .map(str::to_owned)
@@ -126,7 +126,7 @@ fn prepare_tag_picture(image_path: &Path) -> Result<Picture> {
     let img = ImageReader::open(image_path)?.decode()?;
     let img = img.resize_to_fill(512, 512, image::imageops::FilterType::Triangle);
     let mut buff = Vec::<u8>::with_capacity(4096);
-    img.write_to(&mut Cursor::new(&mut buff), image::ImageOutputFormat::Png)?;
+    img.write_to(&mut Cursor::new(&mut buff), ImageFormat::Jpeg)?;
 
     Ok(Picture {
         mime_type: "image/jpg".into(),

@@ -12,13 +12,13 @@ mod mp3_tags;
 mod scan;
 
 fn main() -> Result<()> {
-    let dirs = scan::scan_dirs(PathBuf::from_str(".").unwrap())?;
     let mut buffer = String::with_capacity(4096);
+    let dirs = scan::scan_dirs(PathBuf::from_str(".").unwrap())?;
     for dir in &dirs {
         dir.render_into(&mut buffer)?;
     }
 
-    if found_info_and_should_abort(&dirs) {
+    if found_info_and_should_abort(&dirs, "==> FOUND FOLLOWING TRACKS:") {
         return Ok(());
     }
 
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
             }
         }
 
-        let parsed_bytes = match dto::deserialize_music_dirs(&buffer) {
+        let parsed_bytes = match dto::deserialize_music_dirs(&buffer, &dirs) {
             Ok(dirs) => dirs,
             Err(err) => {
                 eprintln!("Error when trying to parse the edited tags: {err}");
@@ -44,6 +44,10 @@ fn main() -> Result<()> {
             }
         };
 
+        if found_info_and_should_abort(&parsed_bytes, "==> Will save following metadata:") {
+            return Ok(());
+        }
+
         mp3_tags::save_music_dirs(parsed_bytes)?;
         break;
     }
@@ -51,8 +55,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn found_info_and_should_abort(found_dirs: &[MusicDir]) -> bool {
-    println!("=> FOUND FOLLOWING TRACKS:");
+fn found_info_and_should_abort(found_dirs: &[MusicDir], message: &'static str) -> bool {
+    println!("\t{message}");
 
     for (
         AlbumMetadata {
