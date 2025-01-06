@@ -56,10 +56,10 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
                 match result {
                     Ok((option_music_dir, subdirs)) => {
                         if let Some(music_dir) = option_music_dir {
-                            let _ = result_sender.send(Ok(music_dir));
+                            result_sender.send(Ok(music_dir)).expect("Failed to send to the result sender");
                         }
                         for subdir in subdirs {
-                            let _ = subdir_sender.send(subdir);
+                            subdir_sender.send(subdir).expect("Failed to send to the subdir sender");
                         }
                     }
                     Err(err) => {
