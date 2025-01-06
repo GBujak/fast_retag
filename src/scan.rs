@@ -51,8 +51,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
                     };
 
                 eprintln!("Thread {idx}: Scanning directory [{subdir:?}]");
-
-                let result: Result<(Option<MusicDir>, Vec<PathBuf>)> = scan_dir(subdir);
+                let result: Result<(Option<MusicDir>, Vec<PathBuf>)> = scan_dir(&subdir);
 
                 match result {
                     Ok((option_music_dir, subdirs)) => {
@@ -64,7 +63,9 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
                         }
                     }
                     Err(err) => {
-                        let _ = result_sender.send(Err(err));
+                        let _ = result_sender.send(Err(anyhow!(
+                            "Error on thread {idx} scanning directory {subdir:?}: {err:?}"
+                        )));
                     }
                 }
             }
@@ -92,7 +93,7 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
     Ok(results)
 }
 
-fn scan_dir(path: PathBuf) -> Result<(Option<MusicDir>, Vec<PathBuf>)> {
+fn scan_dir(path: &PathBuf) -> Result<(Option<MusicDir>, Vec<PathBuf>)> {
     let mut music_files: Vec<(u32, MusicFile)> = Vec::new();
     let mut subdirs: Vec<PathBuf> = Vec::new();
     let mut image_files: Vec<ImageFile> = Vec::new();

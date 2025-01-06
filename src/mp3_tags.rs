@@ -2,13 +2,13 @@ use crate::dto::{AlbumMetadata, ImageFile, Metadata, MusicDir};
 use anyhow::{Ok, Result};
 use chrono::Datelike;
 use id3::frame::Picture;
-use id3::{no_tag_ok, Tag, TagLike};
+use id3::{Tag, TagLike};
 use image::{ImageFormat, ImageReader};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 
 pub fn get_mp3_metadata(path: impl AsRef<Path>, track: u32) -> Result<Metadata> {
-    let tag = no_tag_ok(Tag::read_from_path(path))?.unwrap_or(Tag::new());
+    let tag = Tag::read_from_path(path).unwrap_or(Tag::new());
 
     fn fix_toml_string(it: String) -> String {
         it.replace(char::from(0), "").replace('"', "\\\"")
@@ -87,7 +87,7 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
 }
 
 fn save_metadata_for_file(path: &str, metadata: Metadata, picture: Option<&Picture>) -> Result<()> {
-    let mut tag = id3::no_tag_ok(Tag::read_from_path(path))?.unwrap_or(Tag::new());
+    let mut tag = Tag::read_from_path(path).unwrap_or(Tag::new());
 
     let artist = match metadata.artist.as_deref() {
         Some("") | None => metadata.album_artist.as_str(),
