@@ -45,6 +45,9 @@ pub fn get_mp3_metadata(path: impl AsRef<Path>, track: u32) -> Result<Metadata> 
 }
 
 pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
+    let total_size = dirs.iter().flat_map(|it| it.music_files.iter()).count();
+    let mut current = 0;
+
     for dir in dirs {
         let AlbumMetadata {
             ref album,
@@ -79,6 +82,8 @@ pub fn save_music_dirs(dirs: Vec<MusicDir>) -> Result<()> {
             let mut path: PathBuf = dir.path.as_str().into();
             path.push(file.file_path);
 
+            current += 1;
+            println!("Saving file [{current}/{total_size}] [{path:?}]");
             save_metadata_for_file(path.to_str().unwrap(), metadata, id3_picture.as_ref())?;
         }
     }
