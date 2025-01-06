@@ -4,10 +4,10 @@ Set or update mp3 metadata with your `$EDITOR`.
 
 This program:
 
-1. Recursively scans the current `$PATH` for directories with `.mp3` files.
+1. Recursively scans the current directory for directories with `.mp3` files.
 2. Generates a `.toml` config containing all the current tags formatted to be
    easy to change in vim (but inferior editors are also supported).
-3. You change the `.toml` config in the `$EDITOR`.
+3. You change the `.toml` config in your `$EDITOR`.
 4. The tags are updated on the `.mp3` files.
 
 The program also finds `.jpg` and `.png` files in the directories with `.mp3`
