@@ -1,11 +1,100 @@
 use crate::dto::{AlbumMetadata, ImageFile, MusicDir, MusicFile};
 use crate::mp3_tags::get_mp3_metadata;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use std::num::NonZero;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
+    let (result_sender, result_receiver) = crossbeam_channel::unbounded::<Result<MusicDir>>();
+    let (subdir_sender, subdir_receiver) = crossbeam_channel::unbounded::<PathBuf>();
+
+    let cpus = std::thread::available_parallelism()
+        .ok()
+        .map(NonZero::get)
+        .unwrap_or(1_usize);
+    let idle = Arc::new(AtomicUsize::new(0));
+
+    let mut thread_handles = vec![];
+    for idx in 0..cpus {
+        let result_sender = result_sender.clone();
+        let subdir_sender = subdir_sender.clone();
+        let subdir_receiver = subdir_receiver.clone();
+        let idle = Arc::clone(&idle);
+
+        thread_handles.push(std::thread::spawn(move || {
+            eprintln!("Started thread [{idx}]");
+
+            loop {
+                let idle_threads = idle.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                let subdir =
+                    match subdir_receiver.recv_deadline(Instant::now() + Duration::from_millis(500)) {
+                        Ok(subdir) => {
+                            idle.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                            subdir
+                        },
+                        Err(_) => {
+                            if idle_threads == cpus {
+                                eprintln!("Thread {idx} timed out getting new dir, it will quit");
+                                break;
+                            } else {
+                                eprintln!(
+                                    "Thread {idx} timed out getting new dir but there are {} active threads so it will not quit",
+                                    cpus - idle_threads
+                                );
+                                idle.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+                                continue;
+                            }
+                        }
+                    };
+
+                eprintln!("Thread {idx}: Scanning directory [{subdir:?}]");
+
+                let result: Result<(Option<MusicDir>, Vec<PathBuf>)> = scan_dir(subdir);
+
+                match result {
+                    Ok((option_music_dir, subdirs)) => {
+                        if let Some(music_dir) = option_music_dir {
+                            let _ = result_sender.send(Ok(music_dir));
+                        }
+                        for subdir in subdirs {
+                            let _ = subdir_sender.send(subdir);
+                        }
+                    }
+                    Err(err) => {
+                        let _ = result_sender.send(Err(err));
+                    }
+                }
+            }
+
+            eprintln!("Thread {idx} exit");
+        }));
+    }
+
+    subdir_sender.send(path)?;
+    drop(result_sender);
+    drop(subdir_sender);
+
+    for handle in thread_handles {
+        let thread_id = handle.thread().id();
+        if handle.join().is_err() {
+            return Err(anyhow!("failed to join thread handle {:?}", thread_id));
+        }
+    }
+
+    let mut results = vec![];
+    for result in result_receiver {
+        results.push(result?);
+    }
+
+    Ok(results)
+}
+
+fn scan_dir(path: PathBuf) -> Result<(Option<MusicDir>, Vec<PathBuf>)> {
     let mut music_files: Vec<(u32, MusicFile)> = Vec::new();
-    let mut subdirs: Vec<MusicDir> = Vec::new();
+    let mut subdirs: Vec<PathBuf> = Vec::new();
     let mut image_files: Vec<ImageFile> = Vec::new();
     let mut album_metadata: Option<AlbumMetadata> = None;
 
@@ -34,25 +123,21 @@ pub fn scan_dirs(path: PathBuf) -> Result<Vec<MusicDir>> {
         }
 
         if file.metadata()?.is_dir() {
-            subdirs.append(&mut scan_dirs(file.path())?);
+            subdirs.push(file.path());
         }
     }
 
     let music_files = sorted_by_track_number(music_files);
 
-    Ok(match album_metadata {
-        Some(metadata) => [MusicDir {
+    Ok((
+        album_metadata.map(|metadata| MusicDir {
             path: assert_unicode_path(path),
             metadata,
             music_files,
             image_files,
-        }]
-        .into_iter()
-        .chain(subdirs)
-        .collect(),
-
-        None => subdirs,
-    })
+        }),
+        subdirs,
+    ))
 }
 
 fn sorted_by_track_number(mut music_files_with_tracks: Vec<(u32, MusicFile)>) -> Vec<MusicFile> {
